@@ -9,6 +9,7 @@ from plymouth import Plymouth
 loading_screen = Plymouth()
 
 job = loadingscreen.start("service", "description")
+# Loading happens here
 job.finish()
 
 loading_screen.end()

@@ -23,7 +23,7 @@ $$$$$$$  |$$$$$$$  |\$$$$$$  /$$ |      $$ | \$$\ $$$$$$\ $$$$$$$  |
            |___/                                                                   |___/                                   
 		  
 sp0rk1s Plymouth Loading Screen
-1.0.0
+1.0.1
 
 """
 
@@ -40,7 +40,7 @@ class PlymouthJob:
 
 	def __init__(self, plymouth: 'Plymouth', name: str, description: str):
 		self.plymouth = plymouth
-		self.plymouth.print(f"         \033[90mStarting \033[0m{name}\033[90m - {description}...")
+		self.plymouth.print(f"         \033[90mStarting \033[0m{name}\033[90m - {description}...\033[0m")
 		self.name = name
 		self.description = description
 		self.started = time.time()
@@ -67,7 +67,7 @@ class PlymouthJob:
 			f"\033[1;31m*\033[0;31m*    ",
 			f"\033[0;31m*     ",
 		]
-		self.plymouth.print(f"\033[90m[\033[32m  OK  \033[90m] Started \033[0m{self.name}\033[90m - {self.description}.")
+		self.plymouth.print(f"\033[90m[\033[32m  OK  \033[90m] Started \033[0m{self.name}\033[90m - {self.description}.\033[0m")
 		self.status = "started"
 		while self.status == "started":
 			if 5 < time.time() - self.started:
@@ -75,22 +75,22 @@ class PlymouthJob:
 			time.sleep(0.2)
 
 		if self.status == "highlighted":
-			line = self.plymouth.print(f"\033[90m[      \033[90m] Job {self.name} running (5s / no limit)")
+			line = self.plymouth.print(f"\033[90m[      \033[90m] Job {self.name} running (5s / no limit)\033[0m")
 			while self.status == "highlighted":
 				elapsed = time.time() - self.started
 				pattern = _PATTERN[int(elapsed*2 % len(_PATTERN))]
-				self.plymouth.update(line, f"\033[90m[{pattern}\033[90m] Job {self.name} running ({int(elapsed)}s / no limit)")
+				self.plymouth.update(line, f"\033[90m[{pattern}\033[90m] Job {self.name} running ({int(elapsed)}s / no limit)\033[0m")
 				time.sleep(0.5)
-			self.plymouth.update(line, f"\033[90m[{pattern}\033[90m] Job {self.name} running ({int(elapsed)}s / no limit)")
+			self.plymouth.update(line, f"\033[90m[      \033[90m] Job {self.name} running ({int(elapsed)}s / no limit)\033[0m")
 				
 		if self.status == "finished":
-			self.plymouth.print(f"\033[90m[\033[32m  OK  \033[90m] Finished \033[0m{self.name}\033[90m - {self.description}.")
+			self.plymouth.print(f"\033[90m[\033[32m  OK  \033[90m] Finished \033[0m{self.name}\033[90m - {self.description}.\033[0m")
 		if self.status == "depend":
-			self.plymouth.print(f"\033[90m[\033[33mDEPEND\033[90m] Dependent \033[0m{self.name}\033[90m - {self.description}.")
+			self.plymouth.print(f"\033[90m[\033[33mDEPEND\033[90m] Dependent \033[0m{self.name}\033[90m - {self.description}.\033[0m")
 		if self.status == "warned":
-			self.plymouth.print(f"\033[90m[\033[33m WARN \033[90m] Warned \033[0m{self.name}\033[90m - {self.description}.")
+			self.plymouth.print(f"\033[90m[\033[33m WARN \033[90m] Warned \033[0m{self.name}\033[90m - {self.description}.\033[0m")
 		if self.status == "failed":
-			self.plymouth.print(f"\033[90m[\033[31mFAILED\033[90m] Failed \033[0m{self.name}\033[90m - {self.description}.")
+			self.plymouth.print(f"\033[90m[\033[31mFAILED\033[90m] Failed \033[0m{self.name}\033[90m - {self.description}.\033[0m")
 
 	def finish(self) -> None:
 		self.status = "finished"
@@ -109,16 +109,22 @@ class Plymouth:
 
 	jobs: dict[str, PlymouthJob]
 	lines: int
+	_os: str
 	_clear: bool
 
 	def __init__(self, clear = True):
 		self.lines = 0
-		job = PlymouthJob(self, "plymouth.service", "(v1.0.0) Enabling plymouth for the application")
+		job = PlymouthJob(self, "init@plymouth", "Initiating Plymouth loading screen")
 		import os
 		os.system("color")
 		self._clear = clear
-		if clear:
+		self._os = os.name
+		if self._clear and self._os == "nt":
 			os.system("cls")
+		elif self._clear and self._os == "posix":
+			os.system("clear")
+		elif self._clear:
+			os.system("clear")
 		self.jobs = {"Plymouth": job}
 		job.finish()
 
@@ -144,9 +150,13 @@ class Plymouth:
 			if job.status in ["starting", "started", "highlighted"]:
 				job.fail()
 				job.thread.join()
-		job = PlymouthJob(self, "plymouth-quit.service", "Disabling plymouth for the application")
+		job = PlymouthJob(self, "end@plymouth", "All jobs finished, ending Plymouth loading screen")
 		time.sleep(0.5)
 		job.finish()
 		time.sleep(0.1)
-		if self._clear:
+		if self._clear and self._os == "nt":
 			os.system("cls")
+		elif self._clear and self._os == "posix":
+			os.system("clear")
+		elif self._clear:
+			os.system("clear")
